@@ -1,0 +1,51 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "landingPage": "/wp-admin/admin.php?page=wc-settings&tab=shipping&zone_id=0",
+  "login": true,
+  "preferredVersions": {
+    "php": "8.2",
+    "wp": "6.9"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "woocommerce"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "flexible-shipping"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "Flexible Shipping Playground",
+        "blogdescription": "Playground dla scenariuszy Flexible Shipping",
+        "site_visibility": "0",
+        "woocommerce_default_country": "US",
+        "woocommerce_currency": "USD",
+        "woocommerce_store_address": "Test street 1",
+        "woocommerce_store_city": "New York",
+        "woocommerce_store_postcode": "10001",
+        "woocommerce_weight_unit": "kg",
+        "woocommerce_dimension_unit": "cm",
+        "woocommerce_allow_tracking": "no"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once 'wordpress/wp-load.php'; if ( class_exists( 'WC_Install' ) ) { WC_Install::create_pages(); } update_option( 'woocommerce_default_country', 'US' ); update_option( 'woocommerce_currency', 'USD' ); update_option( 'woocommerce_weight_unit', 'kg' ); update_option( 'woocommerce_dimension_unit', 'cm' ); update_option( 'woocommerce_allow_tracking', 'no' ); update_option( 'woocommerce_coming_soon', 'no' ); $existing_products = get_posts( array( 'post_type' => 'product', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'fields' => 'ids', 'posts_per_page' => -1 ) ); foreach ( $existing_products as $product_id ) { wp_delete_post( (int) $product_id, true ); } $create_product = static function ( $name, $price, $weight, $sku ) { if ( ! class_exists( 'WC_Product_Simple' ) ) { return; } $product = new WC_Product_Simple(); $product->set_name( $name ); $product->set_status( 'publish' ); $product->set_catalog_visibility( 'visible' ); $product->set_regular_price( $price ); $product->set_price( $price ); $product->set_weight( $weight ); $product->set_sku( $sku ); $product->set_manage_stock( false ); $product->set_stock_status( 'instock' ); $product->save(); }; $create_product( 'Product 1', '1', '1', 'playground-product-1' ); $create_product( 'Product 2', '2', '2', 'playground-product-2' ); $create_product( 'Product 3', '1', '3', 'playground-product-3' ); if ( class_exists( 'WC_Shipping_Zone' ) ) { $zone = new WC_Shipping_Zone( 0 ); $shipping_methods = $zone->get_shipping_methods( false, 'admin' ); if ( is_array( $shipping_methods ) ) { foreach ( $shipping_methods as $shipping_method ) { if ( isset( $shipping_method->instance_id ) ) { $zone->delete_shipping_method( (int) $shipping_method->instance_id ); } } } $add_method = static function ( $zone, $title, $rules ) { $instance_id = (int) $zone->add_shipping_method( 'flexible_shipping_single' ); if ( $instance_id <= 0 ) { return; } update_option( 'woocommerce_flexible_shipping_single_' . $instance_id . '_settings', array( 'method_title' => $title, 'method_description' => '', 'tax_status' => 'none', 'prices_include_tax' => 'no', 'method_enabled' => 'yes', 'method_integration' => '', 'method_free_shipping' => '', 'method_free_shipping_label' => '', 'method_free_shipping_cart_notice' => 'no', 'method_calculation_method' => 'sum', 'cart_calculation' => 'package', 'method_visibility' => 'no', 'method_default' => 'no', 'method_debug_mode' => 'no', 'method_rules' => wp_json_encode( $rules ), 'id_for_shipping' => 'flexible_shipping_single:' . $instance_id, 'title' => $title ) ); }; $weight_rules = array( array( 'conditions' => array( array( 'condition_id' => 'weight', 'min' => '', 'max' => '1' ) ), 'cost_per_order' => '1', 'additional_costs' => array(), 'special_action' => 'none' ), array( 'conditions' => array( array( 'condition_id' => 'weight', 'min' => '1.01', 'max' => '2' ) ), 'cost_per_order' => '2', 'additional_costs' => array(), 'special_action' => 'none' ), array( 'conditions' => array( array( 'condition_id' => 'weight', 'min' => '2.01', 'max' => '' ) ), 'cost_per_order' => '3', 'additional_costs' => array(), 'special_action' => 'none' ) ); $value_rules = array( array( 'conditions' => array( array( 'condition_id' => 'value', 'min' => '', 'max' => '1' ) ), 'cost_per_order' => '3', 'additional_costs' => array(), 'special_action' => 'none' ), array( 'conditions' => array( array( 'condition_id' => 'value', 'min' => '1.01', 'max' => '2' ) ), 'cost_per_order' => '2', 'additional_costs' => array(), 'special_action' => 'none' ), array( 'conditions' => array( array( 'condition_id' => 'value', 'min' => '2.01', 'max' => '' ) ), 'cost_per_order' => '1', 'additional_costs' => array(), 'special_action' => 'none' ) ); $add_method( $zone, 'Weight based (Playground)', $weight_rules ); $add_method( $zone, 'Order value based (Playground)', $value_rules ); }"
+    }
+  ]
+}

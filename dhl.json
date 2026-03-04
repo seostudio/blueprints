@@ -1,0 +1,51 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "landingPage": "/wp-admin/admin.php?page=wc-settings&tab=shipping&section=dhl_polska",
+  "login": true,
+  "preferredVersions": {
+    "php": "8.2",
+    "wp": "6.9"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "woocommerce"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "dhl-polska"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "DHL Polska Preview",
+        "blogdescription": "Podglad konfiguracji WooCommerce DHL Polska",
+        "site_visibility": "0",
+        "woocommerce_default_country": "PL",
+        "woocommerce_currency": "PLN",
+        "woocommerce_store_address": "Testowa 1",
+        "woocommerce_store_city": "Warszawa",
+        "woocommerce_store_postcode": "00-001",
+        "woocommerce_weight_unit": "kg",
+        "woocommerce_dimension_unit": "cm",
+        "woocommerce_allow_tracking": "no"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; if ( class_exists( 'WC_Install' ) ) { WC_Install::create_pages(); } if ( class_exists( 'WC_Shipping_Zone' ) ) { $zone = new WC_Shipping_Zone(); $zone->set_zone_name( 'Polska' ); $zone->set_zone_locations( array( array( 'code' => 'PL', 'type' => 'country' ) ) ); $zone_id = (int) $zone->save(); if ( $zone_id > 0 ) { $zone = new WC_Shipping_Zone( $zone_id ); $instance_id = (int) $zone->add_shipping_method( 'dhl_polska_flat_rate' ); if ( $instance_id > 0 ) { update_option( 'woocommerce_dhl_polska_flat_rate_' . $instance_id . '_settings', array( 'enabled' => 'yes', 'title' => 'DHL Polska', 'tax_status' => 'none', 'service' => 'AH', 'cost' => '15' ) ); } } } ?>"
+    }
+  ]
+}
